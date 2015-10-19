@@ -1,0 +1,386 @@
+<head>
+
+<style type="text/css">
+    div.bg { background-color:lightgrey;text-align: center;line-height:200%;height:100% }
+
+    .tdborder { border:1px solid grey;border-left-style:none;border-right-style:none; }
+
+
+    .highlight {
+        background-color: rgba( 216, 216, 216, 0.5 ) !important;
+    }
+
+    .counter    { font-family: sans-serif; font-size:12; font-weight: bold; text-align:right } 
+
+    .currentscore { background-color:grey }
+    .scoreinit    {  } 
+    .scorevisited  { color: #d0d0d0 }
+    .scoresuccess { color: green }
+    .scorefail    { color: red }
+
+    table {
+        -moz-user-select: none;
+        -khtml-user-select: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }   
+</style>
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js" type="text/javascript"></script>
+
+<script>
+
+var WSQUARE = "\u25A1"
+var BSQUARE = "\u25A0"
+var CIRCLE = "\u25CF"
+
+var LPT = "\u25C0"   // Left-Pointing Triangle
+var RPT = "\u25B6"   // Right-Pointing Triangle
+
+
+var TICK = "<font size='+3' color='green'>\u2714</font>"
+var CROSS = "<font size='+3' color='red'>\u2718</font>"
+
+var SCORE_INIT     = 0,
+    SCORE_VISITED  = 1,
+    SCORE_SUCCESS = 2,
+    SCORE_FAIL    = 3
+
+var qSet, 
+    qTotal, qSuccess, qFail,
+    qStat, qNo, 
+    qAnswers = {},
+    scoreboard, aCorrect = undefined;
+
+</script>
+
+</head>
+<body>
+
+<table width=100% height=100% 
+    style="text-align:center;border-collapse:collapse;">
+  <tr height=20 ><td colspan=2 style="" class=tdborder>
+
+<table width=100%  ><tr style="vertical-align:top">
+    <td style="padding:0">
+       <div class=bg onClick='gotoQuestion("prev")'
+                    style="width:50;float:left;">&#x25C0;</div>
+    </td>
+    <td>
+       <div id=scoreboard style="cursor:default;float:left;">x</div>
+
+    </td>
+    <td width=120>
+       <div class=bg onClick='gotoQuestion("next")'
+                    style="width:50;float:right">&#x25B6;</div>
+       <div id=counter class="counter" style="background:rgb(235,235,255);width:44;float:right">0/?</div>
+    </td>
+
+  </tr>
+</table>
+
+
+</td></tr>
+
+<tr height=50% ><td iq=quiz colspan=2 class=tdborder>
+
+<!-- ============================================================== mcq.p-wwww === -->
+<table height=100% width=100% style="text-align:center;border-collapse:collapse;">
+  <tr>
+
+    <td colspan=3 id="q" onClick="checkme(this)" align=center>xx</td>
+    <td id=hint class=speaker valign=bottom align=center
+        onClick="qSet.qSet[qNo].audioObj.play()" 
+        width=60 title="body">EN</td>
+  </tr>
+  <tr >
+    <td class="speaker tdborder" valign=bottom align=left width=60
+         onClick="playit(qAnswers['a1'])"><img style="width:30;heigth:30"src=speaker.jpg><br></td>
+
+    <td id="a1" class="answer tdborder" style='width:50%;border-right-style:solid' onClick="checkme(this)">a1</td>
+
+    <td id="a2" class="answer tdborder" style='width:50%;border-left-style:solid' onClick="checkme(this)">a2</td>
+    <td class="speaker tdborder" valign=bottom align=right 
+         onClick="playit(qAnswers['a2'])" width=60><img style="width:30;heigth:30"src=speaker.jpg><br></td>
+  </tr>
+  <tr>
+    <td class="speaker tdborder" valign=bottom align=left
+         onClick="playit(qAnswers['a3'])" width=60><img style="width:30;heigth:30"src=speaker.jpg><br></td>
+    <td id="a3" class="answer tdborder" style='width:50%;border-right-style:solid' onClick="checkme(this)">a3</td>
+
+    <td id="a4" class="answer tdborder" style='width:50%;border-left-style:solid' onClick="checkme(this)">a4</td>
+    <td class="speaker tdborder" valign=bottom align=right
+         onClick="playit(qAnswers['a4'])" width=60><img style="width:30;heigth:30"src=speaker.jpg><br></td>
+  </tr>
+</table>
+
+<!-- ================================================================================= -->
+</td></tr>
+</table>
+<script>
+
+  $(function(){
+
+    // highlight answers
+    $('.answer').hover(function(){
+        $(this).addClass('highlight');
+    },function(){
+        $(this).removeClass('highlight');
+    });
+
+    $('.speaker').hover(function(){
+        $(this).addClass('highlight');
+    },function(){
+        $(this).removeClass('highlight');
+    });
+
+     $.getJSON( "body.docs.json", function(json){
+        qSet = json ;
+
+
+        qTotal = qSet.qSet.length;
+        qSuccess = 0;
+        qFail = 0;
+        qState = 0;
+        qNo = 0;
+    
+        // Prepare question set
+        resetScoreboard( qTotal );
+  
+        gotoQuestion( "goto", qNo );
+
+    } )
+
+  });
+
+
+
+  function resetScoreboard( questionsNo ){
+
+    scoreboard = new Array( qTotal );
+
+    var scorehtml = "";
+
+    tensep = 1;
+    for( i = 0; i < questionsNo; i++ ){
+        scoreboard[ i ] = 0;
+        scorehtml += "<span id=s"+i
+            + " onClick='gotoQuestion(\"goto\"," + i + ")' "
+            + " class=" + getScoreClass( scoreboard[ i ] )
+            + " style='font-size:20;'>" 
+            + getScoreImage( scoreboard[ i ] ) + "</span>"
+
+        if( (tensep++ % 10) == 0 ) 
+            scorehtml += " "
+    }
+
+    $('#scoreboard').html( scorehtml );
+
+    $('#scoreboard span').hover(function(){
+        $(this).addClass('highlight');
+    },function(){
+        $(this).removeClass('highlight');
+    });
+  }
+
+
+  function getScoreImage( score ){
+      return   ( score == SCORE_INIT )? WSQUARE : BSQUARE
+  }
+  function getScoreClass( score ){
+
+    var sclass;
+
+    if( score == SCORE_INIT ){
+        sclass = "scoreinit"
+
+    }else if( score == SCORE_VISITED ){
+        sclass = "scorevisited"
+
+    }else if( score == SCORE_FAIL ){
+        sclass = "scorefail"
+ 
+    }else if( score == SCORE_SUCCESS ){
+        sclass = "scoresuccess"
+
+    }
+    return  sclass
+  }
+
+
+
+
+
+  function setScore( question, score ){
+
+    if( scoreboard[ question ] == score ){
+        // do nothing - same score
+    }else if( scoreboard[ question ] == SCORE_FAIL && score == SCORE_SUCCESS ){
+        --qFail
+        ++qSuccess
+    }else if( ( scoreboard[ question ] == SCORE_INIT || scoreboard[ question ] == SCORE_VISITED )
+              && score == SCORE_SUCCESS ) {
+        ++qSuccess
+    }else if( ( scoreboard[ question ] == SCORE_INIT || scoreboard[ question ] == SCORE_VISITED )
+              && score == SCORE_FAIL ) {
+        ++qFail
+    }else if( scoreboard[ question ] == SCORE_SUCCESS && score == SCORE_FAIL ){
+        ++qFail
+        --qSuccess
+    }
+
+
+    if( (scoreboard[ question ] == SCORE_FAIL || scoreboard[ question ] == SCORE_SUCCESS) 
+     && (score == SCORE_VISITED) ){
+    }else{
+        $('#s'+question).removeClass( getScoreClass( scoreboard[ question] )  )
+        scoreboard[ question ] = score
+        $('#s'+question).html( getScoreImage( score ) )
+        $('#s'+question).addClass( getScoreClass( score ) )
+    }
+  }
+
+
+  function checkme(o){
+    var delay = 0;
+
+   if( (qState == 0) && (o.id != "q") ){
+      //check answer
+      if( o == aCorrect ){
+          $(o).prepend(TICK)
+
+        setScore( qNo, SCORE_SUCCESS )
+
+        delay = 800;
+      }else{
+          $(aCorrect).prepend(TICK);
+          $(o).prepend(CROSS)
+
+        setScore( qNo, SCORE_FAIL )
+
+        delay = 2000;
+      }
+
+        qSet.qSet[qNo].audioObj.play()
+        setTimeout( function(){gotoQuestion("next")}, delay )
+
+        //qState = 1
+   }else{
+     gotoQuestion("next")
+
+   }
+
+  }
+
+  function playit( q, onlyload){
+    //make it lazy loaded
+    if( !("audioObj" in qSet.qSet[q]) ){
+        qSet.qSet[q].audioObj = new Audio( qSet.qSet[q].audio )
+    }
+    if( typeof onlyload == "undefined" ){
+        qSet.qSet[ q ].audioObj.play()
+    }
+  }
+
+  function loadQuestion(qNo){
+
+
+    var ignores = {};
+    ignores[qNo] = undefined;
+    var distractors = getDistractors( qTotal, 3, ignores )
+
+    var iCorrect = getRandom( 4 )
+    aCorrect = $("#a"+(iCorrect+1) )[0]
+
+    $("#q").css({'backgroundColor':'white'})
+    $("#q").html("<img style='' src='"+qSet.qSet[qNo].image+"'>")
+    $("#hint").attr("title", qSet.qSet[qNo].question )
+
+
+    for( i = 0; i < 4; i++ ){
+
+        q = (i == iCorrect)? qNo : distractors.shift()
+
+        $("#a"+(i+1) ).css({'backgroundColor':'white'})
+        $("#a"+(i+1) ).html(qSet.qSet[q].answer)
+
+        // preload audio
+        playit( q, 1 )
+        qAnswers[ "a"+(i+1) ] = q
+    }
+    
+    qState = 0
+
+
+    
+   
+    $("#counter").html( getCounterHtml() )
+
+
+  }
+
+  function getCounterHtml(){
+    html  =   qNo+1 +"/" + qTotal 
+    html += "<br>"
+    html += "<span style='color:red'>" + qFail + "</span>"
+    html += "|"
+    html += "<span style='color:green;font-size:120%'>" + qSuccess + "</span>"
+    html += "<span style='color:grey;'>(" + (qTotal - (qSuccess + qFail )) + ")</span>"
+
+    return html
+  }
+
+  function gotoQuestion( direction, question ){
+    $('#s'+qNo).removeClass('currentscore')
+
+    if( direction == "goto" ){
+        if( typeof question == "undefined" ){
+        }else{
+            qNo = question
+        }
+    }else if( direction == "prev" ){
+        qNo = (--qNo >= 0)? qNo: qTotal-1
+
+    }else{  // direction == "next"
+        qNo = (++qNo < qTotal)? qNo: 0
+    }
+
+
+    $('#s'+qNo).addClass('currentscore')
+
+    loadQuestion(qNo)
+
+    setScore( qNo, SCORE_VISITED )
+
+
+  }
+
+  // lib functions
+  function getRandom( range ){
+    return Math.floor( Math.random()*range )
+  }
+
+  // TODO: change to check if total-ignores < distractors; remove counter cludge /111110
+  //
+  //
+  function getDistractors( total, noOfDistractors, ignores ){
+    var distractors = new Array()
+    var n = 0;
+    for( i = 0; i < noOfDistractors; i++ ){
+        n = getRandom( total )
+        if( n in ignores ){
+            var counter = -1;
+            do{
+                n++
+                n = n<total?n:0
+                counter++
+            }while( (n in ignores) && counter < total )
+        }        
+        distractors.push( n )
+        ignores[ n ] = undefined
+    }
+    return distractors
+  }
+
+</script>
+</body>

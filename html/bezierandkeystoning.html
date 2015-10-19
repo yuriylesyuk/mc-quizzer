@@ -1,0 +1,269 @@
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+
+<script>
+
+	//====================================================================================
+	// getBezier() - calculates a given position along a Bezier curve specified by 2,3 or
+	//               4 control points.
+	//====================================================================================
+
+	//Bezier functions:
+	B1 = function(t) { return (t*t*t); }
+	B2 = function(t) { return (3*t*t*(1-t)); }
+	B3 = function(t) { return (3*t*(1-t)*(1-t)); }
+	B4 = function(t) { return ((1-t)*(1-t)*(1-t)); }
+	
+	//coordinate constructor
+	coord = function (x,y) { if(!x) var x=0; if(!y) var y=0; return {x: x, y: y}; }
+	
+	//Finds the coordinates of a point at a certain stage through a bezier curve
+	function getBezier(percent,startPos,endPos,control1,control2) {
+		//if there aren't any extra control points plot a straight line, if there is only 1
+		//make 2nd point same as 1st
+		
+		if(!control2 && !control1) var control2 = new coord(startPos.x + 3*(endPos.x-startPos.x)/4, startPos.y + 3*(endPos.y-startPos.y)/4);
+		if(!control2) var control2 = control1;
+		if(!control1) var control1 = new coord(startPos.x + (endPos.x-startPos.x)/4, startPos.y + (endPos.y-startPos.y)/4);
+				
+		var pos = new coord();
+		pos.x = startPos.x * B1(percent) + control1.x * B2(percent) + control2.x * B3(percent) + endPos.x * B4(percent);
+		pos.y = startPos.y * B1(percent) + control1.y * B2(percent) + control2.y * B3(percent) + endPos.y * B4(percent);
+		
+		return pos;
+	}
+
+
+// var dot=[[30,30],[80,30],[30,80],[80,80]];	
+// canvas.skew(pic, dot);
+
+CanvasRenderingContext2D.prototype.skew=function(src, co){
+
+	this.save();
+
+	var height=src.height
+	var width=src.width;
+
+	var t=document.createElement('CANVAS').getContext('2d');
+
+	var leftSpace=Math.min(co[0][0], co[2][0]);
+	var totalWidth=Math.max(co[1][0], co[3][0])-leftSpace;
+	t.canvas.setAttribute('width', totalWidth);
+	t.canvas.setAttribute('height', height);
+
+	if (co[2][0]<co[0][0]) t.translate(co[0][0]-co[2][0], 0);
+
+	var topWidth=co[1][0]-co[0][0];
+	var botWidth=co[3][0]-co[2][0];
+
+	var leftChange=co[2][0]-co[0][0];
+
+	for (var i=0; i<height; i++) t.drawImage(src, 0, i, width, 1, leftChange*i/height, i, Math.abs((topWidth*(height-i)+botWidth*i)/height), 1);
+    
+        var leftTop=co[0][1]-(co[1][1]-co[0][1])*(co[0][0]-leftSpace)/(co[1][0]-co[0][0]);
+        var rightTop=co[1][1]+(co[1][1]-co[0][1])*(leftSpace+totalWidth-co[1][0])/(co[1][0]-co[0][0]);
+
+        var leftBot=co[2][1]-(co[3][1]-co[2][1])*(co[2][0]-leftSpace)/(co[3][0]-co[2][0])-leftTop;
+    	var rightBot=co[3][1]+(co[3][1]-co[2][1])*(leftSpace+totalWidth-co[3][0])/(co[3][0]-co[2][0])-rightTop;
+
+    	for (var i=0; i<totalWidth; i++) this.drawImage(t.canvas, i, 0, 1, height, leftSpace+i, (leftTop*(totalWidth-i)+rightTop*i)/totalWidth, 1, (leftBot*(totalWidth-i)+rightBot*i)/totalWidth);
+
+	this.restore();
+}
+
+</script>
+
+
+</head><body>
+
+<table><tr><td>
+<canvas id=scale width=100 height=100 style="border:1px solid"> </canvas>
+
+<canvas id=speed width=100 height=100 style="border:1px solid"> </canvas>
+<br>
+<canvas id=route width=100 height=100 style="border:1px solid"> </canvas>
+<canvas id=xxxxx width=100 height=100 style="border:1px solid"> </canvas>
+<br>
+<canvas id=a width=200 height=260 style="border:1px solid"></canvas>
+</td><td>
+<script>
+
+    var _intervalId = null;        
+    var _intervalCounter = 0;
+    var _intervalLimit = 20;
+
+    var imgFrom = null;
+    var imgTo = null;
+
+    var cardX = 0;
+    var cardY = 0;
+
+  start = coord( 0, 0)
+  end = coord( 1,1)
+
+    scalep1 = coord( 0.1, 0.7 )
+    scalep2 = coord( 0.2, 0.9 )
+
+//  p1 = coord(0.5, 0.2)
+//  p2 = coord(0.9, 0.4)
+
+    speedp1 = coord(0.6, 0.1)
+    speedp2 = coord(0.1, 0.7)
+
+
+    routestart = coord( 0, 0)
+    routep1 = coord(0, 0.6)
+    routep2 = coord(0.5, 0.5)
+    routeend = coord( 0.5, 1)
+
+var graphctxscale = $('#scale').get(0).getContext('2d')
+var graphctxspeed = $('#speed').get(0).getContext('2d')
+var graphctxroute = $('#route').get(0).getContext('2d')
+var ctx = $('#a').get(0).getContext('2d' )
+
+var x, y;
+
+document.write("<table>")   
+
+    for( i = 0; i <=1; i=i+0.05){
+        document.write("<tr>")
+
+        scale = getBezier( i, start, end, scalep1, scalep2 )
+
+        scalex = Math.floor(scale.x*100)
+        scaley = Math.floor(scale.y*100)
+        graphctxscale.fillRect( scalex,scaley, 1, 1 )
+
+        coeff =  document.write( "<td>" + i + "</td><td>"+ "" + scalex + "</td><td> " + scaley + "  </td>  "  );
+
+        speed = getBezier( i, start, end, speedp1, speedp2 )
+
+        speedx = Math.floor(speed.x*100)
+        speedy = Math.floor(speed.y*100)
+        graphctxspeed.fillRect( speedx, speedy, 1, 1 )
+
+        route = getBezier( i, routestart, routeend, routep1, routep2 )
+
+        routex = Math.floor(route.x*100)
+        routey = Math.floor(route.y*100)
+        graphctxroute.fillRect( routex, speedy, 1, 1 )
+
+
+      document.write("</tr>")
+
+    }
+
+document.write("</table>")
+
+</script>
+
+</td></tr></table>
+
+
+<script>
+function incSteps(){
+
+
+}
+
+function updateStatus(text){
+ $('#status').html( text )
+
+}
+
+
+function flip(){
+
+      _intervalCounter = 1;
+      _intervalId = setInterval( function(){
+            incSteps()
+
+         i = (_intervalCounter % 10)
+
+
+
+            ctx.clearRect(0,50, 200, 250)
+
+        if( _intervalCounter <10 ){
+            scalefactor = getBezier( (10-i) * 0.1, start, end, scalep1, scalep2 )
+
+            dotDx = Math.floor(scalefactor.x*50)
+            dotDy = Math.floor(scalefactor.x*30)
+
+            dot=[
+                    [ 0+dotDx, 100-dotDy ], [ 100-dotDx, 100+dotDy ],
+                    [ 0+dotDx, 200+dotDy ], [ 100-dotDx, 200-dotDy ]
+                ]
+
+            ctx.skew(imgFrom, dot)
+          }else{
+            scalefactor = getBezier( i * 0.1, start, end, scalep1, scalep2 )
+
+            dotDx = Math.floor(scalefactor.x*50)
+            dotDy = Math.floor(scalefactor.y*30)
+
+            dot=[
+                    [ 0+dotDx, 100+dotDy ], [ 100-dotDx, 100-dotDy ],
+                    [ 0+dotDx, 200-dotDy ], [ 100-dotDx, 200+dotDy ]
+                ]
+
+            ctx.skew(imgTo, dot)
+          }
+
+
+            updateStatus("Status: " + _intervalCounter + " | scalefactor.x:"+ scalefactor.x + "  i: "+i )
+            
+            
+            if( ++_intervalCounter > _intervalLimit ){ clearInterval(_intervalId) 
+
+                ctx.clearRect(0,50, 200, 250)
+                ctx.drawImage( imgTo, 0, 100, 100, 100 )
+
+                if( imgTo == imgM ){
+                    imgFrom = imgM
+                    imgTo = img
+                }else{
+                    imgFrom = img
+                    imgTo = imgM
+                }
+
+            }
+
+        }, 1000/25 );
+
+
+}
+
+$(function(){
+    rect = document.createElement('canvas')
+    rect.width=200                 
+    rect.height=100
+
+    rectctx = rect.getContext('2d')
+    rectctx.fillStyle = '#00f'
+    rectctx.strokeRect(0,0, 200, 100)
+
+    imgM = new Image()
+    imgM.src = "lemouton.jpg"     
+
+    img = new Image()
+    img.src = "lepapillon.jpg"     
+    img.onload = function(){
+
+
+    ctx.setTransform(1,0,0,1,0,0)
+
+
+        imgFrom = img;
+        imgTo = imgM;
+        flip();
+    }
+});
+
+
+</script>
+
+<input type=button onclick="flip()" value=Flip></input> <div id=status></div>
+</body>
+</html>
