@@ -3,7 +3,9 @@ Multiple-choice Style Quizz for Foreign Languages
 
 The mc-quizzer is a javascript application that combines images, words, and sounds 
 in an integrated experience. 
-The voice clips are generated using google translate.
+The voice clips are generated using the Google Translate.
+
+The design goal was to minimise an amount of mouse clicks while working with the quizz.
 
 The quizz is data driven using .json file like:
 ```json
