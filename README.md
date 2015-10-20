@@ -17,5 +17,4 @@ The quizz is data driven using .json file like:
  ]
 }
 ``` 
-
-The application is deployed at: <http://mc-quizzer.appspot.com/mcq.html>
+The application is packaged as a GAE app and deployed at: <http://mc-quizzer.appspot.com/mcq.html>
